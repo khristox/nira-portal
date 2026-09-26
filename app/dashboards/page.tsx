@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { getAllServices } from "@/lib/db";
+import { getLocalizedServices } from "@/lib/db";
+import { getActiveLanguage } from "@/lib/language";
 
 export const dynamic = "force-dynamic";
 
-export default function DashboardsPage() {
-  const dashboards = getAllServices().filter(
+export default async function DashboardsPage() {
+  const language = await getActiveLanguage();
+  const dashboards = getLocalizedServices(language).filter(
     (s) => s.chart_url && s.chart_url.trim() !== ""
   );
 

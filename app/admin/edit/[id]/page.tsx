@@ -3,6 +3,9 @@ import { revalidatePath } from "next/cache";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 
+import TranslationsEditor from "@/components/TranslationsEditor";
+import { getTranslationsForService } from "@/lib/db";
+
 async function updateAction(formData: FormData) {
   "use server";
 
@@ -64,6 +67,8 @@ export default async function EditServicePage({
 
   const service = getServiceById(id);
   if (!service) notFound();
+  const translations = getTranslationsForService(id);
+
 
   const sp = await searchParams;
   const get = (key: string, fallback = ""): string => {
@@ -299,6 +304,8 @@ export default async function EditServicePage({
           </Link>
         </div>
       </form>
+      <TranslationsEditor serviceId={id} initialTranslations={translations} />
+
 
       {/* Danger zone */}
       <div className="mt-8 p-4 border border-red-200 dark:border-red-900 rounded-xl bg-red-50/50 dark:bg-red-950/30">

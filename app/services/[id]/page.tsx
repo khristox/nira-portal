@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getServiceById } from "@/lib/db";
+import { getLocalizedServiceById } from "@/lib/db";
+import { getActiveLanguage } from "@/lib/language";
 import RichContent from "@/components/RichContent";
 import ChartEmbed from "@/components/ChartEmbed";
 
@@ -12,13 +13,18 @@ export default async function ServiceDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const service = getServiceById(Number(id));
+  const serviceId = Number(id);
+  if (!Number.isFinite(serviceId)) notFound();
+
+  const language = await getActiveLanguage();
+  const service = getLocalizedServiceById(serviceId, language);
   if (!service) notFound();
 
   const hasEmoji = !!service.emoji?.trim();
   const hasUrl = !!service.url?.trim();
   const hasHtml = !!service.content_html?.trim();
   const hasChart = !!service.chart_url?.trim();
+  const showEmpty = !hasUrl && !hasHtml && !hasChart;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
@@ -29,6 +35,13 @@ export default async function ServiceDetailPage({
       >
         ← Back to all services
       </Link>
+
+      {/* Optional translation note — comment out if you don't want it */}
+      {service.translationApplied && language !== "en" && (
+        <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2.5 py-1 rounded-full">
+          🌐 {language.toUpperCase()} · Translated
+        </div>
+      )}
 
       {/* Header — emoji hidden on mobile (< 640px) */}
       <header className="mt-4 flex items-start gap-3 sm:gap-4">
@@ -94,7 +107,7 @@ export default async function ServiceDetailPage({
       )}
 
       {/* Fallback when nothing else */}
-      {!hasUrl && !hasHtml && !hasChart && (
+      {showEmpty && (
         <div className="mt-8 p-6 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 text-center text-sm text-gray-500 dark:text-gray-400">
           This service has no additional content yet.
         </div>

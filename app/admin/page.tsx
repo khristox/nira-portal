@@ -17,6 +17,16 @@ export default function AdminPage() {
 
   return (
     <div>
+      {/* Admin section nav */}
+      <div className="flex gap-3 mb-6">
+        <Link
+          href="/admin/events"
+          className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors"
+        >
+          📅 Manage Events
+        </Link>
+      </div>
+
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
           Services ({services.length})

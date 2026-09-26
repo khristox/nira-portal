@@ -13,6 +13,8 @@ export default function ThemeProvider({
       defaultTheme="system"
       enableSystem
       disableTransitionOnChange
+      enableColorScheme={false}
+      nonce="nira-portal"
     >
       {children}
     </NextThemesProvider>

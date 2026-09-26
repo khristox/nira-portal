@@ -156,3 +156,7 @@ body {
   --rh-item-bg: #111827;
   --rh-item-border: #ef4444;
 }
+
+html {
+  scroll-behavior: smooth;
+}

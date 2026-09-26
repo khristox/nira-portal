@@ -3,8 +3,9 @@
 import Image from "next/image";
 import { useState } from "react";
 import ThemeToggle from "./ThemeToggle";
+import LanguageSwitcher from "./LanguageSwitcher";
 
-export default function Header() {
+export default function Header({ language }: { language: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -33,18 +34,22 @@ export default function Header() {
       {/* White header bar */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-    <a href="/" className="flex items-center gap-3">
-<Image
-  src="/nira-logo.png"
-  alt="NIRA"
-  width={140}
-  height={56}
-  className="h-12 sm:h-14 w-auto object-contain"
-  style={{ width: "auto", height: "auto" }}
-  priority
-/>
-</a>
+          <a href="/" className="flex items-center gap-3">
+            <Image
+              src="/nira-logo.png"
+              alt="NIRA"
+              width={140}
+              height={56}
+              className="h-12 sm:h-14 w-auto object-contain"
+              style={{ width: "auto", height: "auto" }}
+              priority
+            />
+          </a>
+
           <div className="flex items-center gap-1 sm:gap-2">
+            {/* Language switcher */}
+            <LanguageSwitcher current={language} />
+
             {/* Theme toggle — always visible */}
             <ThemeToggle />
 
@@ -70,28 +75,28 @@ export default function Header() {
             </button>
 
             {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-700 dark:text-gray-300 ml-4">
-          <a href="/" className="hover:text-red-700 dark:hover:text-red-500">Services</a>
-          <a href="/dashboards" className="hover:text-red-700 dark:hover:text-red-500">Dashboards</a>
-          <a href="/about" className="hover:text-red-700 dark:hover:text-red-500">About</a>
-          <a href="/contact" className="hover:text-red-700 dark:hover:text-red-500">Contact</a>
-          <a href="/admin" className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
-            Admin
-          </a>
-        </nav>
+            <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-700 dark:text-gray-300 ml-4">
+              <a href="/" className="hover:text-red-700 dark:hover:text-red-500">Services</a>
+              <a href="/dashboards" className="hover:text-red-700 dark:hover:text-red-500">Dashboards</a>
+              <a href="/about" className="hover:text-red-700 dark:hover:text-red-500">About</a>
+              <a href="/contact" className="hover:text-red-700 dark:hover:text-red-500">Contact</a>
+              <a href="/admin" className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                Admin
+              </a>
+            </nav>
           </div>
         </div>
 
         {/* Mobile dropdown */}
         {menuOpen && (
           <nav className="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-<div className="px-4 py-3 space-y-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-  <a href="/" className="block py-2 hover:text-red-700 dark:hover:text-red-500">Services</a>
-  <a href="/dashboards" className="block py-2 hover:text-red-700 dark:hover:text-red-500">Dashboards</a>
-  <a href="/about" className="block py-2 hover:text-red-700 dark:hover:text-red-500">About</a>
-  <a href="/contact" className="block py-2 hover:text-red-700 dark:hover:text-red-500">Contact</a>
-  <a href="/admin" className="block py-2 text-red-700 dark:text-red-500 font-semibold">Admin</a>
-</div>
+            <div className="px-4 py-3 space-y-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <a href="/" className="block py-2 hover:text-red-700 dark:hover:text-red-500">Services</a>
+              <a href="/dashboards" className="block py-2 hover:text-red-700 dark:hover:text-red-500">Dashboards</a>
+              <a href="/about" className="block py-2 hover:text-red-700 dark:hover:text-red-500">About</a>
+              <a href="/contact" className="block py-2 hover:text-red-700 dark:hover:text-red-500">Contact</a>
+              <a href="/admin" className="block py-2 text-red-700 dark:text-red-500 font-semibold">Admin</a>
+            </div>
           </nav>
         )}
       </div>
