@@ -47,7 +47,7 @@ export default async function PublicSurveysPage({
         Back to Event
       </Link>
 
-      <header className="mb-8">
+     <header className="mb-6 sm:mb-8">
         <span className="inline-block bg-red-600 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full">
           Surveys
         </span>
