@@ -1,0 +1,214 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { submitSurveyAction } from "@/lib/survey-actions";
+
+type Question = {
+  id: number;
+  kind: string;
+  prompt: string;
+  help_text: string;
+  options_json: string;
+  is_required: number;
+  sort_order: number;
+};
+
+export default function SurveyForm({
+  surveyId,
+  slug,
+  title,
+  description,
+  questions,
+}: {
+  surveyId: number;
+  slug: string;
+  title: string;
+  description: string;
+  questions: Question[];
+}) {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const res = await submitSurveyAction(formData);
+      if (res && !res.ok) {
+        setError(res.error ?? "Could not submit.");
+      }
+    });
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-6"
+    >
+      <input type="hidden" name="survey_id" value={surveyId} />
+      <input type="hidden" name="slug" value={slug} />
+
+      <header>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+          {title}
+        </h2>
+        {description && (
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            {description}
+          </p>
+        )}
+      </header>
+
+      {questions.map((q, idx) => {
+        let options: string[] = [];
+        try {
+          options = JSON.parse(q.options_json || "[]");
+        } catch {
+          options = [];
+        }
+
+        const name = `q_${q.id}`;
+
+        return (
+          <div key={q.id} className="border-t border-gray-100 dark:border-gray-800 pt-5">
+            <label className="block font-medium text-gray-900 dark:text-gray-100 mb-1">
+              <span className="text-gray-400 dark:text-gray-500 mr-2">
+                {idx + 1}.
+              </span>
+              {q.prompt}
+              {q.is_required === 1 && (
+                <span className="text-red-600 ml-1">*</span>
+              )}
+            </label>
+            {q.help_text && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                {q.help_text}
+              </p>
+            )}
+
+            {q.kind === "text" && (
+              <input
+                name={name}
+                required={q.is_required === 1}
+                className="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              />
+            )}
+
+            {q.kind === "long_text" && (
+              <textarea
+                name={name}
+                rows={4}
+                required={q.is_required === 1}
+                className="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              />
+            )}
+
+            {q.kind === "single_choice" && (
+              <div className="space-y-2">
+                {options.map((opt, i) => (
+                  <label key={i} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name={name}
+                      value={opt}
+                      required={q.is_required === 1 && i === 0}
+                      className="w-4 h-4"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            )}
+
+            {q.kind === "multi_choice" && (
+              <div className="space-y-2">
+                {options.map((opt, i) => (
+                  <label key={i} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      name={name}
+                      value={opt}
+                      className="w-4 h-4"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            )}
+
+            {q.kind === "rating" && (
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <label
+                    key={n}
+                    className="flex flex-col items-center cursor-pointer group"
+                  >
+                    <input
+                      type="radio"
+                      name={name}
+                      value={String(n)}
+                      required={q.is_required === 1 && n === 1}
+                      className="sr-only peer"
+                    />
+                    <span className="text-3xl text-gray-300 dark:text-gray-700 peer-checked:text-yellow-500 group-hover:text-yellow-400 transition-colors">
+                      ★
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {n}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            {q.kind === "yes_no" && (
+              <div className="flex gap-3">
+                {["Yes", "No"].map((v) => (
+                  <label
+                    key={v}
+                    className="flex items-center gap-2 text-sm px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
+                    <input
+                      type="radio"
+                      name={name}
+                      value={v}
+                      required={q.is_required === 1 && v === "Yes"}
+                      className="w-4 h-4"
+                    />
+                    {v}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      <div className="border-t border-gray-100 dark:border-gray-800 pt-5">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Your name (optional)
+        </label>
+        <input
+          name="respondent"
+          placeholder="Leave blank for anonymous"
+          className="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+        />
+      </div>
+
+      {error && (
+        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-900 text-sm text-red-700 dark:text-red-400">
+          {error}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={pending}
+        className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50"
+      >
+        {pending ? "Submitting..." : "Submit Response"}
+      </button>
+    </form>
+  );
+}

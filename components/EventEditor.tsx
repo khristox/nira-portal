@@ -291,6 +291,35 @@ export default function EventEditor({
         </div>
         {initial?.id && (
           <div className="flex gap-2">
+            <Link
+      href={`/admin/events/${initial.id}/speakers`}
+      className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+    >
+      🎤 Manage Speakers
+    </Link>
+
+        <Link
+      href={`/admin/events/${initial.id}/products`}
+      className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+    >
+      📦 Manage Products
+    </Link>
+
+<Link
+  href={`/admin/events/${initial.id}/surveys`}
+  className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+>
+  📝 Manage Surveys
+</Link>
+
+
+<Link
+  href={`/admin/events/${initial.id}/polls`}
+  className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+>
+  📊 Manage Polls
+</Link>
+
             <button
               onClick={togglePublish}
               type="button"

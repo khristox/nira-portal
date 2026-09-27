@@ -1,10 +1,24 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getEventWithProgram } from "@/lib/db";
+import { todayInUganda, nowMinutesInUganda } from "@/lib/time";
+import ProgramTabs from "./ProgramTabs";
+import { getEventSpeakers, getEventProducts, getEventPolls, getEventSurveys } from "@/lib/db";
+
+
 
 export const dynamic = "force-dynamic";
 
-function formatDate(iso: string) {
+function formatDateShort(iso: string) {
+  const d = new Date(iso + "T00:00:00");
+  return d.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+}
+
+function formatDateLong(iso: string) {
   const d = new Date(iso + "T00:00:00");
   return d.toLocaleDateString("en-GB", {
     weekday: "long",
@@ -14,30 +28,6 @@ function formatDate(iso: string) {
   });
 }
 
-function formatShortDate(iso: string) {
-  const d = new Date(iso + "T00:00:00");
-  return d.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatTime(t: string) {
-  if (!t) return "";
-  const [h, m] = t.split(":").map(Number);
-  const ampm = h >= 12 ? "pm" : "am";
-  const hh = h % 12 === 0 ? 12 : h % 12;
-  return `${hh}:${String(m).padStart(2, "0")}${ampm}`;
-}
-
-function timeRange(start: string, end: string) {
-  if (start && end) return `${formatTime(start)} – ${formatTime(end)}`;
-  if (start) return formatTime(start);
-  if (end) return `until ${formatTime(end)}`;
-  return "All day";
-}
-
 export default async function EventPage({
   params,
 }: {
@@ -45,17 +35,24 @@ export default async function EventPage({
 }) {
   const { slug } = await params;
   const event = getEventWithProgram(slug);
+  
   if (!event || !event.is_published) notFound();
+  const speakers = getEventSpeakers(event.id);
+const products = getEventProducts(event.id);
+const activePolls = getEventPolls(event.id, true);
+const activeSurveys = getEventSurveys(event.id, true);
 
-  const today = new Date().toISOString().slice(0, 10);
+
+  const today = todayInUganda();
+  const nowMin = nowMinutesInUganda();
   const isLive = event.start_date <= today && event.end_date >= today;
-  const todayDay = event.days.find((d) => d.date === today);
-  const otherDays = event.days.filter((d) => d.date !== today);
-  const showTodayFirst = isLive && !!todayDay;
+
+  const hasDescription = !!event.description?.trim();
+  const hasSubtitle =
+    !!event.subtitle?.trim() && event.subtitle.trim() !== event.title.trim();
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      {/* Back link */}
       <Link
         href="/"
         className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-500 mb-6"
@@ -76,255 +73,222 @@ export default async function EventPage({
         Back to Home
       </Link>
 
-      {/* Header */}
-      <header className="mb-10">
-        <div className="flex items-center flex-wrap gap-3 mb-3">
+      <header className={hasDescription ? "mb-8" : "mb-4"}>
+        <div className="flex items-center gap-3 mb-3 flex-wrap">
           {isLive ? (
             <span className="inline-flex items-center gap-1.5 bg-red-600 text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+              <span className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
               Live Now
             </span>
           ) : (
-            <span className="inline-block bg-red-600 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full">
+            <span className="inline-block bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full">
               Event
             </span>
           )}
           <span className="text-xs text-gray-500 dark:text-gray-400">
-            {formatShortDate(event.start_date)} – {formatShortDate(event.end_date)}
+            {formatDateShort(event.start_date)} – {formatDateShort(event.end_date)}
           </span>
         </div>
 
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
+        <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-gray-50 leading-tight">
           {event.title}
         </h1>
-        {event.subtitle && (
-          <p className="text-lg text-gray-600 dark:text-gray-400 mt-2">
+
+        {hasSubtitle && (
+          <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 mt-2">
             {event.subtitle}
           </p>
         )}
-        {event.location && (
+
+        {event.location?.trim() && (
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
             📍 {event.location}
           </p>
         )}
+
+        {!hasDescription && (
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
+            📅 {formatDateLong(event.start_date)} –{" "}
+            {formatDateLong(event.end_date)}
+          </p>
+        )}
       </header>
 
-      {/* Description */}
-      {event.description && (
+      {hasDescription && (
         <div
-          className="prose prose-slate dark:prose-invert max-w-none mb-10"
+          className="prose prose-slate dark:prose-invert max-w-none mb-8"
           dangerouslySetInnerHTML={{ __html: event.description }}
         />
       )}
 
-      {/* Program */}
-      <section className="mb-12">
-        <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            {showTodayFirst ? "Happening Today" : "Program"}
-          </h2>
-          {showTodayFirst && otherDays.length > 0 && (
+      <ProgramTabs
+        days={event.days}
+        today={today}
+        nowMin={nowMin}
+        isLive={isLive}
+      />
+
+{activePolls.length > 0 && (
+  <section className="mt-10">
+    <Link
+      href={`/events/${slug}/polls`}
+      className="flex items-center justify-between gap-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-xl p-5 hover:bg-red-100 dark:hover:bg-red-950 transition-colors"
+    >
+      <div className="min-w-0">
+        <h3 className="font-semibold text-red-800 dark:text-red-300">
+          📊 Vote in our polls
+        </h3>
+        <p className="text-sm text-red-700 dark:text-red-400 mt-0.5">
+          {activePolls.length} active poll{activePolls.length === 1 ? "" : "s"} · One vote per browser
+        </p>
+      </div>
+      <span className="text-red-700 dark:text-red-400 text-xl flex-shrink-0">→</span>
+    </Link>
+  </section>
+)}
+
+{activeSurveys.length > 0 && (
+  <section className="mt-4">
+    <Link
+      href={`/events/${slug}/surveys`}
+      className="flex items-center justify-between gap-4 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-xl p-5 hover:bg-blue-100 dark:hover:bg-blue-950 transition-colors"
+    >
+      <div className="min-w-0">
+        <h3 className="font-semibold text-blue-800 dark:text-blue-300">
+          📝 Take our survey
+        </h3>
+        <p className="text-sm text-blue-700 dark:text-blue-400 mt-0.5">
+          {activeSurveys.length} open surve{activeSurveys.length === 1 ? "y" : "ys"} · Help us improve
+        </p>
+      </div>
+      <span className="text-blue-700 dark:text-blue-400 text-xl flex-shrink-0">→</span>
+    </Link>
+  </section>
+)}
+    
+    {/* Speakers */}
+{speakers.length > 0 && (
+  <section className="mt-14">
+    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-5">
+      Speakers
+    </h2>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {speakers.map((s) => (
+        <div
+          key={s.id}
+          className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 flex flex-col items-center text-center"
+        >
+          {s.photo_base64 ? (
+            <img
+              src={s.photo_base64}
+              alt={s.name}
+              className="w-24 h-24 rounded-full object-cover border-2 border-gray-100 dark:border-gray-800 mb-3"
+            />
+          ) : (
+            <div className="w-24 h-24 rounded-full bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 flex items-center justify-center text-3xl font-bold mb-3">
+              {s.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+            {s.name}
+          </h3>
+
+          {s.title && (
+            <p className="text-sm text-red-700 dark:text-red-400 mt-0.5">
+              {s.title}
+            </p>
+          )}
+
+          {s.organization && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              {s.organization}
+            </p>
+          )}
+
+          {s.bio && (
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-3 leading-relaxed">
+              {s.bio}
+            </p>
+          )}
+
+          {s.website && (
             <a
-              href="#full-program"
-              className="text-sm font-medium text-red-600 dark:text-red-400 hover:underline"
+              href={s.website}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 text-xs text-red-600 dark:text-red-500 hover:underline"
             >
-              View Full Program ↓
+              Website →
             </a>
           )}
         </div>
+      ))}
+    </div>
+  </section>
+)}
 
-        {event.days.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400">
-            Program will be announced soon.
-          </p>
-        ) : showTodayFirst ? (
-          <>
-            {/* Today's program */}
-            <div className="mb-4">
-              <div className="flex items-baseline gap-3 mb-4 pb-2 border-b-2 border-red-500">
-                <h3 className="text-lg font-bold text-red-700 dark:text-red-400">
-                  {todayDay!.label || "Today"}
-                </h3>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {formatDate(todayDay!.date)}
-                </span>
-                <span className="ml-auto text-[10px] font-bold uppercase bg-red-600 text-white px-2 py-0.5 rounded-full">
-                  Today
-                </span>
-              </div>
-
-              {todayDay!.activities.length === 0 ? (
-                <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-                  No activities scheduled for today.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {todayDay!.activities.map((act) => {
-                    const now = new Date();
-                    const nowMin = now.getHours() * 60 + now.getMinutes();
-                    const [sh, sm] = act.start_time
-                      ? act.start_time.split(":").map(Number)
-                      : [0, 0];
-                    const [eh, em] = act.end_time
-                      ? act.end_time.split(":").map(Number)
-                      : [23, 59];
-                    const startMin = sh * 60 + sm;
-                    const endMin = eh * 60 + em;
-                    const isNow = nowMin >= startMin && nowMin <= endMin;
-                    const isPast = nowMin > endMin;
-
-                    return (
-                      <div
-                        key={act.id}
-                        className={`flex flex-col sm:flex-row gap-2 sm:gap-6 rounded-lg p-4 border-2 transition-all ${
-                          isNow
-                            ? "bg-red-50 dark:bg-red-950 border-red-500 shadow-lg"
-                            : isPast
-                            ? "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 opacity-60"
-                            : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
-                        }`}
-                      >
-                        <div className="sm:w-44 flex-shrink-0 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                          {timeRange(act.start_time, act.end_time)}
-                          {isNow && (
-                            <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase bg-red-600 text-white px-1.5 py-0.5 rounded-full">
-                              <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                              Now
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 dark:text-gray-100">
-                            {act.title}
-                          </p>
-                          {act.description && (
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                              {act.description}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+{/* Products */}
+{products.length > 0 && (
+  <section className="mt-14">
+    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-5">
+      Products on Display
+    </h2>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {products.map((p) => (
+        <div
+          key={p.id}
+          className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden flex flex-col"
+        >
+          {p.image_base64 ? (
+            <div className="aspect-[4/3] bg-gray-100 dark:bg-gray-800 overflow-hidden">
+              <img
+                src={p.image_base64}
+                alt={p.name}
+                className="w-full h-full object-cover"
+              />
             </div>
+          ) : (
+            <div className="aspect-[4/3] bg-red-50 dark:bg-red-950 flex items-center justify-center text-5xl">
+              📦
+            </div>
+          )}
 
-            {/* Other days summary */}
-            {otherDays.length > 0 && (
-              <div
-                id="full-program"
-                className="mt-10 pt-6 border-t border-gray-200 dark:border-gray-800"
-              >
-                <h3 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-4">
-                  Other Days
-                </h3>
-                <div className="space-y-5">
-                  {otherDays.map((day) => (
-                    <div key={day.id}>
-                      <div className="flex items-baseline gap-3 mb-3 pb-1 border-b border-red-100 dark:border-red-900">
-                        <h4 className="font-semibold text-red-700 dark:text-red-400">
-                          {day.label || "Day"}
-                        </h4>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {formatDate(day.date)}
-                        </span>
-                        <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">
-                          {day.activities.length} activit
-                          {day.activities.length === 1 ? "y" : "ies"}
-                        </span>
-                      </div>
-                      <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300 list-disc pl-5">
-                        {day.activities.slice(0, 4).map((act) => (
-                          <li key={act.id}>
-                            <span className="text-gray-500 dark:text-gray-400">
-                              {timeRange(act.start_time, act.end_time)} —{" "}
-                            </span>
-                            {act.title}
-                          </li>
-                        ))}
-                        {day.activities.length > 4 && (
-                          <li className="text-gray-400 dark:text-gray-500 italic">
-                            + {day.activities.length - 4} more
-                          </li>
-                        )}
-                        {day.activities.length === 0 && (
-                          <li className="text-gray-400 dark:text-gray-500 italic">
-                            No activities yet
-                          </li>
-                        )}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          <div className="p-5 flex flex-col flex-1">
+            {p.category && (
+              <span className="inline-block text-[10px] font-bold uppercase tracking-wider bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full self-start mb-2">
+                {p.category}
+              </span>
             )}
-          </>
-        ) : (
-          /* Not live — full program inline */
-          <div className="space-y-10">
-            {event.days.map((day) => {
-              const isToday = day.date === today;
-              return (
-                <div key={day.id}>
-                  <div
-                    className={`flex items-baseline gap-3 mb-4 pb-2 border-b-2 ${
-                      isToday
-                        ? "border-red-500"
-                        : "border-red-100 dark:border-red-900"
-                    }`}
-                  >
-                    <h3 className="text-lg font-bold text-red-700 dark:text-red-400">
-                      {day.label || "Day"}
-                    </h3>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {formatDate(day.date)}
-                    </span>
-                    {isToday && (
-                      <span className="ml-auto text-[10px] font-bold uppercase bg-red-600 text-white px-2 py-0.5 rounded-full">
-                        Today
-                      </span>
-                    )}
-                  </div>
 
-                  {day.activities.length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-                      No activities scheduled yet.
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {day.activities.map((act) => (
-                        <div
-                          key={act.id}
-                          className="flex flex-col sm:flex-row gap-2 sm:gap-6 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
-                        >
-                          <div className="sm:w-44 flex-shrink-0 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                            {timeRange(act.start_time, act.end_time)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 dark:text-gray-100">
-                              {act.title}
-                            </p>
-                            {act.description && (
-                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                {act.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+              {p.name}
+            </h3>
+
+            {p.description && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 leading-relaxed flex-1">
+                {p.description}
+              </p>
+            )}
+
+            {p.website && (
+              <a
+                href={p.website}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 text-sm text-red-600 dark:text-red-500 hover:underline self-start"
+              >
+                Learn more →
+              </a>
+            )}
           </div>
-        )}
-      </section>
-
-      {/* Sponsors */}
+        </div>
+      ))}
+    </div>
+  </section>
+)}
       {event.sponsors.length > 0 && (
-        <section>
+        <section className="mt-14">
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-5">
             Sponsors &amp; Partners
           </h2>
@@ -345,7 +309,7 @@ export default async function EventPage({
                     className="max-h-full max-w-full object-contain"
                   />
                 ) : (
-                  <span className="text-xs text-gray-500 text-center">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 text-center">
                     {s.name}
                   </span>
                 )}
